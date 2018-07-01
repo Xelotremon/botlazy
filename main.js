@@ -105,8 +105,24 @@ if(command === "clean") {
 .catch(error => message.reply(`Je ne peux pas supprimé ces message :/`));
 }
 
+if(command === "help") {
+  var pdp = bot.user.displayAvatarURL;
+  var help_embed = new Discord.RichEmbed()
+     .setColor('#00F6D5')
+     .addField("Les commandes que je peux effectuer:", `**${bot.user.username}**`)
+     .addField(" - __**!help **__:", "Affiche la liste des commandes du bot")
+     .addField(" - __**!kick @**__ :", "Kick une personne du serveur")
+     .addField(" - __**!ban @**__ :", "Ban une personne du serveur")
+     .addField(" - __**!mute @ t s/m/h**__ :", "Mute une personne avec un temps t")
+     .addField(" - __**!play url :**__", "Lance la musique choisie")
+     .addField(" - __**!skip**__ :", "Skip la musique")
+     .addField(" - __**!stop**__ :", "Coupe la musique")
+     .addField(" - __**!ftn pseudo**__ :", "Donne tes stats sur fortnite")
+     .addField(" - __**!rl platform steam-id64**__ :", "Donne tes stats sur Rocket League")
+     .setThumbnail(pdp);
+message.channel.send(help_embed);
 
-
+}
 
 
 
@@ -122,6 +138,7 @@ bot.on("message", function(message) {
     
     
     case "play":
+    
         if (!args[1]) {
           message.channel.sendMessage("Envoie le lien URL avec le play");
           return;
@@ -289,11 +306,6 @@ bot.on("message", function(message) {
         }, ms(mutetime));
         break;
 
-        case "help":
-          var help_embed = new Discord.RichEmbed()
-               .setColor('#00F6D5')
-               .addField("Les commandes que je peux effectuer:", " - !help : Affiche la liste des commandes du bot", " - !kick @: Kick une personne du serveur", " - !ban @: Ban une personne du serveur", " - !mute @ t s/m/h : Mute une personne avec un temps t", " - !play url : Lance la musique choisie", " - !skip : Skip la musique", " - !stop : Coupe la musique", " - !ftn pseudo : Donne tes stats sur fortnite", " - !rl platform steam-id64 : Donne tes stats sur Rocket League")
-          message.channel.send(help_embed);
 
 
   }
