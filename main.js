@@ -224,7 +224,7 @@ bot.on("message", function(message) {
           return;
         }
         if (!args[2]) {
-          message.reply("Tu as oublié de donner ton steam id")
+          message.reply("Tu as oublié de donner ton steam id64, va ici pour la trouver : https://steamid.io/lookup")
           return;
         }
 
@@ -287,6 +287,12 @@ bot.on("message", function(message) {
 
         }, ms(mutetime));
         break;
+
+        case "help":
+          var help_embed = new Discord.RichEmbed()
+               .setColor('#00F6D5')
+               .addField("Les commandes que je peux effectuer:", " - !help : Affiche la liste des commandes du bot", " - !kick @: Kick une personne du serveur", " - !ban @: Ban une personne du serveur", " - !mute @ t s/m/h : Mute une personne avec un temps t", " - !play url : Lance la musique choisie", " - !skip : Skip la musique", " - !stop : Coupe la musique", " - !ftn pseudo : Donne tes stats sur fortnite", " - !rl platform steam-id64 : Donne tes stats sur Rocket League")
+          message.channel.send(help_embed);
 
 
   }
