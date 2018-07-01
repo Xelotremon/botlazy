@@ -8,15 +8,12 @@ const fortnite = new Client('dac80aa0-3f54-437a-a0bd-3a87b0d25e64');
 const rl = require('rocketleague');
 const RL = new rl.Client('7PM507YDVEGZ2BLAJKGS7GPUTX5X5IQK');
 const ms = require("ms");
-const express = require('express');
-const app = express();
 
-
-app.set('port', (process.env.PORT || 5000))
-app.listen(app.get('port'), function(){
-  console.log(`Bot en fonctionnement sur le port ${app.get('port')}`);
-})
-
+var http = require('http')
+http.createServer(function (request, response) {
+  response.writeHead(200,{"Content-Type": "text/plain"})
+  response.end("Hello World\n")
+}),listen(process.env.PORT)
 
 
 
@@ -41,6 +38,12 @@ bot.on("ready", async () => {
   console.log('Bot est pret'); 
   bot.user.setActivity(`!help`);
 });
+
+bot.on("guildMemberAdd", member => {
+  var role = member.guild.roles.find('name', 'Les sauvages')
+  member.addRole(role)
+});
+
 
 bot.on("message", async message => {
 
@@ -119,7 +122,7 @@ bot.on("message", function(message) {
     
     case "play":
         if (!args[1]) {
-          message.channel.sendMessage("Envoie le lien URL avec");
+          message.channel.sendMessage("Envoie le lien URL avec le play");
           return;
         }
         if (!message.member.voiceChannel) {
