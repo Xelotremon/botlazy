@@ -1,8 +1,11 @@
 const Discord = require("discord.js");
 const bot = new Discord.Client();
 const config = require("./config.json");
-const music = require('discord.js-music');
 const ytdl = require("ytdl-core");
+const fs = require('fs');
+const request = require('request');
+const getYoutubeID = require ('get-youtube-id');
+const yt_api_key = 'AIzaSyCRGEzjyjNaMl66c0y7m1TOkIK-zvR2-eg'
 const Client = require('fortnite');
 const fortnite = new Client('dac80aa0-3f54-437a-a0bd-3a87b0d25e64');
 const rl = require('rocketleague');
@@ -19,19 +22,6 @@ app.listen(app.get('port'), function(){
 
 
 
-
-function play(connection,message) {
-  var server = servers[message.guild.id];
-
-  server.dispatcher = connection.playStream(ytdl(server.queue[0], {filter: "audioonly"}));
-
-  server.queue.shift();
-
-  server.dispatcher.on("end", function() {
-    if (server.queue[0]) play(connection,message);
-    else connection.disconnect();
-  });
-}
 
 var servers = {};
 
@@ -123,9 +113,6 @@ if(command === "help") {
 message.channel.send(help_embed);
 
 }
-
-
-
 });
 
   var prefix = "!"
@@ -136,61 +123,6 @@ bot.on("message", function(message) {
   var id = "10"
   switch (args[0].toLowerCase()) {
     
-    
-    case "play":
-    
-        if (!args[1]) {
-          message.channel.sendMessage("Envoie le lien URL avec le play");
-          return;
-        }
-        if (!message.member.voiceChannel) {
-          message.channel.sendMessage("Tu dois être dans un vocal");
-          return;
-        }
-        if (!servers[message.guild.id]) servers[message.guild.id] = {
-          queue: [],
-        };
-
-        var server = servers[message.guild.id];
-        var fetchVideoInfo = require('youtube-info');
-
-        server.queue.push(args[1]);
-
-        if (!message.guild.voiceConnection) message.member.voiceChannel.join().then(function(connection) {
-          play(connection, message);
-
-          var play_embed = new Discord.RichEmbed()
-                 .setColor('#00F6D5')
-                 .addField("**La musique a été enregistré**", "Bonne écoute :)")
-            message.channel.send(play_embed);
-
-        });
-        break;
-    
-
-    case "skip":
-        var server = servers[message.guild.id];
-
-        if (server.dispatcher) server.dispatcher.end();
-        var skip_embed = new Discord.RichEmbed()
-                 .setColor('#EC9500')
-                 .addField("**La musique a été skip**", "Musique suivante :)")
-            message.channel.send(skip_embed);
-
-        break;
-
-
-    case "stop":
-        var server = servers[message.guild.id];
-
-        if(message.guild.voiceConnection) message.guild.voiceConnection.disconnect ();
-        var stop_embed = new Discord.RichEmbed()
-        .setColor('#EC0018')
-        .addField("**La musique a été arrêté**", "au revoir :)")
-   message.channel.send(stop_embed);
-        break;
-        
-
     case "ftn":
         let username =args[1];
         let platform = args [2] || 'pc';
@@ -250,7 +182,7 @@ bot.on("message", function(message) {
         
           let displayName = leaderboard.displayName;
           let stats = leaderboard.stats;
-          
+          console.log(leaderboard)
           let wins = stats.wins;
           let goals = stats.goals;
           let saves = stats.saves;
@@ -310,5 +242,235 @@ bot.on("message", function(message) {
 
   }
 });
+var stopped = false;
+var inform_np = true;
+
+var now_playing_data = {};
+var queue = [];
+var aliases = {};
+
+var voice_connection = null;
+var voice_handler = null;
+var text_channel = null;
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+var commands = [
+
+	{
+		command: "stop",
+		description: "Arrete la musique",
+		parameters: [],
+		execute: function(message, params) {
+			if(stopped) {
+				message.reply("La musique est déjà arrêté");
+			} else {
+				stopped = true;
+				if(voice_handler !== null) {
+					voice_handler.end();
+				}
+				message.channel.sendMessage("La musique a été arrêté");
+			}
+		}
+	},
+
+	{
+		command: "play",
+		description: "Ajoute la musique dand la queue",
+		parameters: ["video URL, ID or alias"],
+		execute: function(message, params) {
+			add_to_queue(params[1], message);
+		}
+	},
+
+	{
+		command: "np",
+		description: "Dis la musique actuelle",
+		parameters: [],
+		execute: function(message, params) {
+
+			var response = "Musique actuelle: ";
+			if(is_bot_playing()) {
+				response += "\"" + now_playing_data["title"] + "\" (demandé par " + now_playing_data["user"] + ")";
+			} else {
+				response += "nothing!";
+			}
+
+			message.reply(response);
+		}
+	},
+
+	{
+		command: "skip",
+		description: "Skip la musique",
+		parameters: [],
+		execute: function(message, params) {
+			if(voice_handler !== null) {
+				message.reply("Skip...");
+				voice_handler.end();
+			} else {
+				message.reply("Il n'y a pas de musique");
+			}
+		}
+	},
+
+	{
+		command: "list",
+		description: "Montre la liste des musiques enregistrés",
+		parameters: [],
+		execute: function(message, params) {
+			var response = "";
+	
+			if(is_queue_empty()) {
+				response = "La liste est vide";
+			} else {
+				for(var i = 0; i < queue.length; i++) {
+					response += "\"" + queue[i]["title"] + "\" (demandé par " + queue[i]["user"] + ")\n";
+				}
+			}
+			
+			message.reply(response);
+		}
+	},
+
+	{
+		command: "clearlist",
+		description: "Retire toutes les musiques de la liste",
+		parameters: [],
+		execute: function(message, params) {
+			queue = [];
+			message.reply("La liste a été nettoyé");
+		}
+	},
+	
+];
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+function add_to_queue(video, message) {
+
+	if(aliases.hasOwnProperty(video.toLowerCase())) {
+		video = aliases[video.toLowerCase()];
+	}
+
+	var video_id = get_video_id(video);
+
+	ytdl.getInfo("https://www.youtube.com/watch?v=" + video_id, (error, info) => {
+		if(error) {
+			message.reply("La vidéo n'a pas été trouvé");
+		} else {
+			queue.push({title: info["title"], id: video_id, user: message.author.username});
+			message.reply('"' + info["title"] + '" a été ajouté à la liste');
+			if(!stopped && !is_bot_playing() && queue.length === 1) {
+				play_next_song();
+			}
+		}
+	});
+}
+
+function play_next_song() {
+	if(is_queue_empty()) {
+		text_channel.sendMessage("La liste est vide");
+	}
+
+	var video_id = queue[0]["id"];
+	var title = queue[0]["title"];
+	var user = queue[0]["user"];
+
+	now_playing_data["title"] = title;
+	now_playing_data["user"] = user;
+
+	if(inform_np) {
+		text_channel.sendMessage('Musique : "' + title + '" (Demandé par ' + user + ')');
+	}
+
+	var audio_stream = ytdl("https://www.youtube.com/watch?v=" + video_id);
+	voice_handler = voice_connection.playStream(audio_stream);
+
+	voice_handler.once("end", reason => {
+		voice_handler = null;
+		if(!stopped && !is_queue_empty()) {
+			play_next_song();
+		}
+	});
+
+	queue.splice(0,1);
+}
+
+function search_command(command_name) {
+	for(var i = 0; i < commands.length; i++) {
+		if(commands[i].command == command_name.toLowerCase()) {
+			return commands[i];
+		}
+	}
+
+	return false;
+}
+
+function handle_command(message, text) {
+	var params = text.split(" ");
+	var command = search_command(params[0]);
+
+	if(command) {
+		if(params.length - 1 < command.parameters.length) {
+			message.reply("Paramètre insuffisant");
+		} else {
+			command.execute(message, params);
+		}
+	}
+}
+
+function is_queue_empty() {
+	return queue.length === 0;
+}
+
+function is_bot_playing() {
+	return voice_handler !== null;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+function get_video_id(string) {
+	var searchToken = "?v=";
+	var i = string.indexOf(searchToken);
+	
+	if(i == -1) {
+		searchToken = "&v=";
+		i = string.indexOf(searchToken);
+	}
+	
+	if(i == -1) {
+		searchToken = "youtu.be/";
+		i = string.indexOf(searchToken);
+	}
+	
+	if(i != -1) {
+		var substr = string.substring(i + searchToken.length);
+		var j = substr.indexOf("&");
+		
+		if(j == -1) {
+			j = substr.indexOf("?");
+		}
+		
+		if(j == -1) {
+			return substr;
+		} else {
+			return substr.substring(0,j);
+		}
+	}
+	
+	return string;
+}
 
 bot.login(config.token);
