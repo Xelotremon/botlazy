@@ -1,247 +1,29 @@
+
+				////////////////////////////////////////////////////////////////////////////////   
+				//    This program is free software: you can redistribute it and/or modify    //   
+				//    it under the terms of the GNU General Public License as published by    //   
+				//    the Free Software Foundation, either version 3 of the License, or       //   
+				//    (at your option) any later version.                                     //   
+				//                                                                            //   
+				//    This program is distributed in the hope that it will be useful,         //   
+				//    but WITHOUT ANY WARRANTY; without even the implied warranty of          //   
+				//    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the           //   
+				//    GNU General Public License for more details.                            //   
+				//                                                                            //   
+				//    You should have received a copy of the GNU General Public License       //   
+				//    along with this program.  If not, see <http://www.gnu.org/licenses/>.   //   
+				////////////////////////////////////////////////////////////////////////////////
+
 const Discord = require("discord.js");
-const bot = new Discord.Client();
-const config = require("./config.json");
+const fs = require("fs");
 const ytdl = require("ytdl-core");
-const fs = require('fs');
-const request = require('request');
-const getYoutubeID = require ('get-youtube-id');
-const yt_api_key = 'AIzaSyCRGEzjyjNaMl66c0y7m1TOkIK-zvR2-eg'
-const Client = require('fortnite');
-const fortnite = new Client('dac80aa0-3f54-437a-a0bd-3a87b0d25e64');
-const rl = require('rocketleague');
-const RL = new rl.Client('7PM507YDVEGZ2BLAJKGS7GPUTX5X5IQK');
-const ms = require("ms");
-const express = require('express');
-const app = express();
 
+const bot = new Discord.Client({autoReconnect: true, max_message_cache: 0});
 
-app.set('port', (process.env.PORT || 5000))
-app.listen(app.get('port'), function(){
-  console.log(`Bot en fonctionnement sur le port ${app.get('port')}`);
-})
+const dm_text = "Hey there! Use !commands on a public chat room to see the command list.";
+const mention_text = "Use !commands to see the command list.";
+var aliases_file_path = "aliases.json";
 
-
-
-
-var servers = {};
-
-bot.on("ready", async () => {
-  console.log('Bot est pret'); 
-  bot.user.setActivity(`!help`);
-});
-
-bot.on("guildMemberAdd", member => {
-  var role = member.guild.roles.find('name', 'Les sauvages')
-  member.addRole(role)
-});
-
-
-bot.on("message", async message => {
-
-  if(message.author.bot) return;
-  
-
-  if(message.content.indexOf(config.prefix) !== 0) return;
-  
-
-  const args = message.content.slice(config.prefix.length).trim().split(/ +/g);
-  const command = args.shift().toLowerCase();
-  
-
-  if(command === "kick") {
-
-    if(!message.member.roles.some(r=>["Le connard de service", "La meilleure des tueuses", "DEMI-DIEU"].includes(r.name)) )
-      return message.reply("Vous n'avez pas la permission");
-    
-
-    let member = message.mentions.members.first() || message.guild.members.get(args[0]);
-    if(!member)
-      return message.reply("L'utilisateur n'existe pas");
-    if(!member.kickable) 
-      return message.reply("Vous ne pouvez pas kick cette personne");
-    
-    
-    await member.kick()
-      .catch(error => message.reply(`Sorry, mais non`));
-    message.reply(` ${member.user.tag} a été kick `);
-
-  }
-  
-  if(command === "ban") {
-
-    if(!message.member.roles.some(r=>["Le connard de service", "La meilleure des tueuses", "DEMI-DIEU"].includes(r.name)) )
-      return message.reply("Vous n'avez pas la permission");
-    
-    let member = message.mentions.members.first();
-    if(!member)
-      return message.reply("L'utilisateur n'existe pas");
-    if(!member.bannable) 
-      return message.reply("Vous ne pouvez pas ban cette personne");
-
-    await member.ban()
-      .catch(error => message.reply(`Sorry, mais non`));
-message.reply(`${member.user.tag} a été ban`);
-  }
-
-if(command === "clean") {
-
-    const deleteCount = parseInt(args[0], 10);
-    
-    if(!deleteCount || deleteCount < 2 || deleteCount > 100)
-      return message.reply("Sélectionne un nombre entre 2 et 100 pour supprimer");
-    
-    const fetched = await message.channel.fetchMessages({limit: deleteCount});
-    message.channel.bulkDelete(fetched)
-.catch(error => message.reply(`Je ne peux pas supprimé ces message :/`));
-}
-
-if(command === "help") {
-  var pdp = bot.user.displayAvatarURL;
-  var help_embed = new Discord.RichEmbed()
-     .setColor('#00F6D5')
-     .addField("Les commandes que je peux effectuer:", `**${bot.user.username}**`)
-     .addField(" - __**!help **__:", "Affiche la liste des commandes du bot")
-     .addField(" - __**!kick @**__ :", "Kick une personne du serveur")
-     .addField(" - __**!ban @**__ :", "Ban une personne du serveur")
-     .addField(" - __**!mute @ t s/m/h**__ :", "Mute une personne avec un temps t")
-     .addField(" - __**!play url :**__", "Lance la musique choisie")
-     .addField(" - __**!skip**__ :", "Skip la musique")
-     .addField(" - __**!stop**__ :", "Coupe la musique")
-     .addField(" - __**!ftn pseudo**__ :", "Donne tes stats sur fortnite")
-     .addField(" - __**!rl platform steam-id64**__ :", "Donne tes stats sur Rocket League")
-     .setThumbnail(pdp);
-message.channel.send(help_embed);
-
-}
-});
-
-  var prefix = "!"
-bot.on("message", function(message) {
-  if (message.author.equals(bot.user)) return;
-  if (!message.content.startsWith(prefix)) return;
-  var args = message.content.substring(prefix.length).split(" ");
-  var id = "10"
-  switch (args[0].toLowerCase()) {
-    
-    case "ftn":
-        let username =args[1];
-        let platform = args [2] || 'pc';
-        
-        if (!args[1]) {
-          message.reply("Tu as oublié de mettre ton pseudo")
-          return;
-        }
-        if (!args[2]) {
-          message.reply("Tu as oublié de donner ta platforme de jeu")
-          return;
-        }
-
-        let data = fortnite.user(username, platform).then(data => {
-
-          let stats = data.stats;
-          let lifetime = stats.lifetime;
-
-          let score = lifetime[6]['Score'];
-          let mplayed = lifetime[7]['Matches Played'];
-          let wins = lifetime[8]['Wins'];
-          let winper = lifetime[9]['Win%'];
-          let kills = lifetime[10]['Kills'];
-          let kd = lifetime[11]['K/d'];
-
-          let ft_embed = new Discord.RichEmbed()
-          .setTitle(data.username)
-          .setColor("#EA0027")
-          .addField("Wins", wins, true)
-          .addField("Kills", kills, true)
-          .addField("Score", score, true)
-          .addField("Matchs joués", mplayed, true)
-          .addField("Pourcentage de win", winper, true)
-          .addField("Ratio", kd, true);
-
-          message.channel.send(ft_embed);
-
-
-        });
-        break;
-
-
-        case "rl":
-        let plat =args[1]  || 'steam';
-        let id_steam = args [2];
-        
-        if (!args[1]) {
-          message.reply("Tu as oublié de mettre ta platform")
-          return;
-        }
-        if (!args[2]) {
-          message.reply("Tu as oublié de donner ton steam id64, va ici pour la trouver : https://steamid.io/lookup")
-          return;
-        }
-
-        let leaderboard = RL.getPlayer(id_steam, plat).then(leaderboard => {
-        
-          let displayName = leaderboard.displayName;
-          let stats = leaderboard.stats;
-          console.log(leaderboard)
-          let wins = stats.wins;
-          let goals = stats.goals;
-          let saves = stats.saves;
-          let shots = stats.shots;
-
-
-          let rl_embed = new Discord.RichEmbed()
-          .setTitle(displayName)
-          .setColor("#EA0027")
-          .addField("**Wins**", wins, true)
-          .addField("**But**", goals, true)
-          .addField("**Tir sauvé**", saves, true)
-          .addField("**Tir**", shots, true)
-          message.channel.send(rl_embed);
-        });
-        break;
-
-        case "mute":
-
-        
-        
-        let mute = message.guild.member(message.mentions.users.first() || message.guild.members.get(args[1]));
-        if(!mute) return message.reply("L'utilisateur n'a pas été trouvé");
-        if(!message.member.roles.some(r=>["Le connard de service", "La meilleure des tueuses", "DEMI-DIEU"].includes(r.name)) )
-        return message.reply("Vous n'avez pas la permission");
-        let muterole = message.guild.roles.find('name', "mute");
-        if(!muterole){
-          try{
-            muterole = message.guild.createRole({
-              name: "mute",
-              color: "#000000",
-              permissions:[]
-            });
-            message.guild.channels.forEach(async (channel, id) => {
-              await channel.overwritePermission(muterole, {
-                SEND_MESSAGES: false,
-                ADD_REACTIONS: false
-              });
-            });
-
-          }catch(e){
-            console.log(e.stack);
-          }
-        }
-        let mutetime = args[2];
-        if(!mutetime) return message.reply("Tu dois mettre le temps du mute");
-        mute.addRole(muterole.id);
-        message.reply(`<@${mute.id}> a été mute pour ${ms(mutetime)}`);
-        setTimeout(function(){
-          mute.removeRole(muterole.id);
-          message.channel.send(`<@${mute.id}> a été demute`);
-
-        }, ms(mutetime));
-        break;
-
-
-
-  }
-});
 var stopped = false;
 var inform_np = true;
 
@@ -261,24 +43,40 @@ var commands = [
 
 	{
 		command: "stop",
-		description: "Arrete la musique",
+		description: "Stops playlist (will also skip current song!)",
 		parameters: [],
 		execute: function(message, params) {
 			if(stopped) {
-				message.reply("La musique est déjà arrêté");
+				message.reply("Playback is already stopped!");
 			} else {
 				stopped = true;
 				if(voice_handler !== null) {
 					voice_handler.end();
 				}
-				message.channel.sendMessage("La musique a été arrêté");
+				message.reply("Stopping!");
+			}
+		}
+	},
+	
+	{
+		command: "resume",
+		description: "Resumes playlist",
+		parameters: [],
+		execute: function(message, params) {
+			if(stopped) {
+				stopped = false;
+				if(!is_queue_empty()) {
+					play_next_song();
+				}
+			} else {
+				message.reply("Playback is already running");
 			}
 		}
 	},
 
 	{
-		command: "play",
-		description: "Ajoute la musique dand la queue",
+		command: "request",
+		description: "Adds the requested video to the playlist queue",
 		parameters: ["video URL, ID or alias"],
 		execute: function(message, params) {
 			add_to_queue(params[1], message);
@@ -287,13 +85,13 @@ var commands = [
 
 	{
 		command: "np",
-		description: "Dis la musique actuelle",
+		description: "Displays the current song",
 		parameters: [],
 		execute: function(message, params) {
 
-			var response = "Musique actuelle: ";
+			var response = "Now playing: ";
 			if(is_bot_playing()) {
-				response += "\"" + now_playing_data["title"] + "\" (demandé par " + now_playing_data["user"] + ")";
+				response += "\"" + now_playing_data["title"] + "\" (requested by " + now_playing_data["user"] + ")";
 			} else {
 				response += "nothing!";
 			}
@@ -303,31 +101,73 @@ var commands = [
 	},
 
 	{
+		command: "setnp",
+		description: "Sets whether the bot will announce the current song or not",
+		parameters: ["on/off"],
+		execute: function(message, params) {
+
+			if(params[1].toLowerCase() == "on") {
+				var response = "Will announce song names in chat";
+				inform_np = true;
+			} else if(params[1].toLowerCase() == "off") {
+				var response = "Will no longer announce song names in chat";
+				inform_np = false;
+			} else {
+				var response = "Sorry?";
+			}
+			
+			message.reply(response);
+		}
+	},
+
+	{
+		command: "commands",
+		description: "Displays this message, duh!",
+		parameters: [],
+		execute: function(message, params) {
+			var response = "Available commands:";
+			
+			for(var i = 0; i < commands.length; i++) {
+				var c = commands[i];
+				response += "\n!" + c.command;
+				
+				for(var j = 0; j < c.parameters.length; j++) {
+					response += " <" + c.parameters[j] + ">";
+				}
+				
+				response += ": " + c.description;
+			}
+			
+			message.reply(response);
+		}
+	},
+
+	{
 		command: "skip",
-		description: "Skip la musique",
+		description: "Skips the current song",
 		parameters: [],
 		execute: function(message, params) {
 			if(voice_handler !== null) {
-				message.reply("Skip...");
+				message.reply("Skipping...");
 				voice_handler.end();
 			} else {
-				message.reply("Il n'y a pas de musique");
+				message.reply("There is nothing being played.");
 			}
 		}
 	},
 
 	{
-		command: "list",
-		description: "Montre la liste des musiques enregistrés",
+		command: "queue",
+		description: "Displays the queue",
 		parameters: [],
 		execute: function(message, params) {
 			var response = "";
 	
 			if(is_queue_empty()) {
-				response = "La liste est vide";
+				response = "the queue is empty.";
 			} else {
 				for(var i = 0; i < queue.length; i++) {
-					response += "\"" + queue[i]["title"] + "\" (demandé par " + queue[i]["user"] + ")\n";
+					response += "\"" + queue[i]["title"] + "\" (requested by " + queue[i]["user"] + ")\n";
 				}
 			}
 			
@@ -336,12 +176,64 @@ var commands = [
 	},
 
 	{
-		command: "clearlist",
-		description: "Retire toutes les musiques de la liste",
+		command: "clearqueue",
+		description: "Removes all songs from the queue",
 		parameters: [],
 		execute: function(message, params) {
 			queue = [];
-			message.reply("La liste a été nettoyé");
+			message.reply("Queue has been clered!");
+		}
+	},
+	
+	{
+		command: "aliases",
+		description: "Displays the stored aliases",
+		parameters: [],
+		execute: function(message, params) {
+
+			var response = "Current aliases:";
+			
+			for(var alias in aliases) {
+				if(aliases.hasOwnProperty(alias)) {
+					response += "\n" + alias + " -> " + aliases[alias];
+				}
+			}
+			
+			message.reply(response);
+		}
+	},
+	
+	{
+		command: "setalias",
+		description: "Sets an alias, overriding the previous one if it already exists",
+		parameters: ["alias", "video URL or ID"],
+		execute: function(message, params) {
+
+			var alias = params[1].toLowerCase();
+			var val = params[2];
+			
+			aliases[alias] = val;
+			fs.writeFileSync(aliases_file_path, JSON.stringify(aliases));
+			
+			message.reply("Alias " + alias + " -> " + val + " set successfully.");
+		}
+	},
+	
+	{
+		command: "deletealias",
+		description: "Deletes an existing alias",
+		parameters: ["alias"],
+		execute: function(message, params) {
+
+			var alias = params[1].toLowerCase();
+
+			if(!aliases.hasOwnProperty(alias)) {
+				message.reply("Alias " + alias + " does not exist");
+			} else {
+				delete aliases[alias];
+				fs.writeFileSync(aliases_file_path, JSON.stringify(aliases));
+				message.reply("Alias \"" + alias + "\" deleted successfully.");
+			}
 		}
 	},
 	
@@ -351,6 +243,25 @@ var commands = [
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
+bot.on("disconnect", event => {
+	console.log("Disconnected: " + event.reason + " (" + event.code + ")");
+});
+
+bot.on("message", message => {
+	if(message.channel.type === "dm" && message.author.id !== bot.user.id) { //Message received by DM
+		//Check that the DM was not send by the bot to prevent infinite looping
+		message.channel.sendMessage(dm_text);
+	} else if(message.channel.type === "text" && message.channel.name === text_channel.name) { //Message received on desired text channel
+		if(message.isMentioned(bot.user)) {
+			message.reply(mention_text);
+		} else {
+			var message_text = message.content;
+			if(message_text[0] == '!') { //Command issued
+				handle_command(message, message_text.substring(1));
+			}
+		}
+	}
+});
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -366,10 +277,10 @@ function add_to_queue(video, message) {
 
 	ytdl.getInfo("https://www.youtube.com/watch?v=" + video_id, (error, info) => {
 		if(error) {
-			message.reply("La vidéo n'a pas été trouvé");
+			message.reply("The requested video could not be found.");
 		} else {
 			queue.push({title: info["title"], id: video_id, user: message.author.username});
-			message.reply('"' + info["title"] + '" a été ajouté à la liste');
+			message.reply('"' + info["title"] + '" has been added to the queue.');
 			if(!stopped && !is_bot_playing() && queue.length === 1) {
 				play_next_song();
 			}
@@ -379,7 +290,7 @@ function add_to_queue(video, message) {
 
 function play_next_song() {
 	if(is_queue_empty()) {
-		text_channel.sendMessage("La liste est vide");
+		text_channel.sendMessage("The queue is empty!");
 	}
 
 	var video_id = queue[0]["id"];
@@ -390,7 +301,7 @@ function play_next_song() {
 	now_playing_data["user"] = user;
 
 	if(inform_np) {
-		text_channel.sendMessage('Musique : "' + title + '" (Demandé par ' + user + ')');
+		text_channel.sendMessage('Now playing: "' + title + '" (requested by ' + user + ')');
 	}
 
 	var audio_stream = ytdl("https://www.youtube.com/watch?v=" + video_id);
@@ -422,7 +333,7 @@ function handle_command(message, text) {
 
 	if(command) {
 		if(params.length - 1 < command.parameters.length) {
-			message.reply("Paramètre insuffisant");
+			message.reply("Insufficient parameters!");
 		} else {
 			command.execute(message, params);
 		}
@@ -473,4 +384,34 @@ function get_video_id(string) {
 	return string;
 }
 
-bot.login(config.token);
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+exports.run = function(server_name, text_channel_name, voice_channel_name, aliases_path, token) {
+
+	aliases_file_path = aliases_path;
+
+	bot.on("ready", () => {
+		var server = bot.guilds.find("name", server_name);
+		var voice_channel = server.channels.find("name", voice_channel_name); //The voice channel the bot will connect to
+		text_channel = server.channels.find("name", text_channel_name); //The text channel the bot will use to announce stuff
+		voice_channel.join().then(connection => {voice_connection = connection;}).catch(console.error);
+
+		fs.access(aliases_file_path, fs.F_OK, (err) => {
+			if(err) {
+				aliases = {};
+			} else {
+				try {
+					aliases = JSON.parse(fs.readFileSync(aliases_file_path));
+				} catch(err) {
+					aliases = {};
+				}
+			}
+		});
+
+		console.log("Connected!");
+	});
+
+	bot.login(token);
+}
